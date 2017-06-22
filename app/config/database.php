@@ -57,7 +57,7 @@ return array(
 			'host'      => 'localhost',
 			'database'  => 'xara',
 			'username'  => 'root',
-			'password'  => 'mwaste7',
+			'password'  => '',
 			'port' => '3306',
 			'charset'   => 'utf8',
 			'collation' => 'utf8_unicode_ci',

@@ -41,16 +41,27 @@ class ErpReportsController extends \BaseController {
 
     public function expenses(){
 
+        $location = Input::get("location");
         $from = Input::get("from");
         $to= Input::get("to");
 
-        $expenses = Expense::whereBetween('date', array(Input::get("from"), Input::get("to")))->get();
-
         $organization = Organization::find(1);
 
-        $pdf = PDF::loadView('erpreports.expensesReport', compact('expenses', 'organization','from','to'))->setPaper('a4')->setOrientation('potrait');
+        if($location == 'all'){
+            $expenses = Expense::whereBetween('date', array(Input::get("from"), Input::get("to")))->get();
+
+        $pdf = PDF::loadView('erpreports.expensesReport', compact('expenses', 'organization','from','to','location'))->setPaper('a4')->setOrientation('potrait');
     
         return $pdf->stream('Expense List.pdf');
+    }
+    else{
+        $expenses = Expense::whereBetween('date', array(Input::get("from"), Input::get("to")))->where('station_id',$location)->get();
+
+             $pdf = PDF::loadView('erpreports.expensesingle', compact('expenses', 'organization','from','to','location'))->setPaper('a4')->setOrientation('potrait');
+    
+        return $pdf->stream('Expense List.pdf'); 
+    }
+        
         
     }
 
@@ -171,11 +182,12 @@ class ErpReportsController extends \BaseController {
 
     public function stock(){
 
-        $items = Item::all();      
+        $items = Item::all();
+        $location =  Input::get("location");     
 
         $organization = Organization::find(1);
 
-        $pdf = PDF::loadView('erpreports.stockReport', compact('items', 'organization'))->setPaper('a4')->setOrientation('landscape');
+        $pdf = PDF::loadView('erpreports.stockReport', compact('items', 'organization','location'))->setPaper('a4')->setOrientation('landscape');
     
         return $pdf->stream('Stock Report.pdf');
 
@@ -203,23 +215,24 @@ class ErpReportsController extends \BaseController {
 
     $sales = DB::table('erporders')
                 ->join('erporderitems', 'erporders.id', '=', 'erporderitems.erporder_id')
+                ->join('stations', 'erporders.station_id', '=', 'stations.id')
                 ->join('items', 'erporderitems.item_id', '=', 'items.id')
                 ->join('clients', 'erporders.client_id', '=', 'clients.id')
                 ->where('erporders.type','=','sales')
+                ->where('erporders.organization_id',Confide::user()->organization_id)
                 ->whereBetween('erporders.date', array(Input::get("from"), Input::get("to")))
                 ->orderBy('erporders.order_number', 'Desc')
                 ->select('clients.name as client','items.name as item','quantity','clients.address as address',
                   'clients.phone as phone','clients.email as email','erporders.id as id','erporders.status',
                   'discount_amount','erporders.date','erporders.order_number as order_number','price','description','erporders.type')
                 ->get();
-  $items = Item::all();
-  $locations = Location::all();
-  $organization = Organization::find(1);
+  $items = Item::where('organization_id',Confide::user()->organization_id)->get();
+  $locations = Location::where('organization_id',Confide::user()->organization_id)->get();
+  $organization = Organization::find(Confide::user()->organization_id);
 
         $pdf = PDF::loadView('erpreports.salesReport', compact('sales', 'organization','from','to'))->setPaper('a4')->setOrientation('potrait');
     
         return $pdf->stream('Sales List.pdf');
-
   
 }
 
@@ -459,8 +472,9 @@ public function purchases(){
 
     public function selectSalesPeriod()
     {
+        $stations = Stations::all();
        $sales = Erporder::all();
-        return View::make('erpreports.selectSalesPeriod',compact('sales'));
+        return View::make('erpreports.selectSalesPeriod',compact('sales','stations'));
     }
 
     public function selectPurchasesPeriod()
@@ -483,9 +497,10 @@ public function purchases(){
     }
 
     public function selectExpensesPeriod()
-    {
+    { 
+       $stations = Stations::all(); 
        $expenses = Expense::all();
-        return View::make('erpreports.selectExpensesPeriod',compact('expenses'));
+        return View::make('erpreports.selectExpensesPeriod',compact('expenses','stations'));
     }
 
      public function selectPaymentsPeriod()
@@ -496,8 +511,9 @@ public function purchases(){
 
     public function selectStockPeriod()
     {
+        $stations = Stations::all();
        $stocks = Item::all();
-        return View::make('erpreports.selectStocksPeriod',compact('stocks'));
+        return View::make('erpreports.selectStocksPeriod',compact('stocks','stations'));
     }
 
 
